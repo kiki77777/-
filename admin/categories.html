@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="utf-8">
+    <title>Categories &laquo; Admin</title>
+    <link rel="stylesheet" href="../static/assets/vendors/bootstrap/css/bootstrap.css">
+    <link rel="stylesheet" href="../static/assets/vendors/font-awesome/css/font-awesome.css">
+    <link rel="stylesheet" href="../static/assets/vendors/nprogress/nprogress.css">
+    <link rel="stylesheet" href="../static/assets/css/admin.css">
+    <script src="../static/assets/vendors/nprogress/nprogress.js"></script>
+    <script src="../static/assets/vendors/jquery/jquery.js"></script>
+    <script src="../static/assets/vendors/bootstrap/js/bootstrap.js"></script>
+    <script src="../static/assets/vendors/art-template/template-web.js"></script>
+    <script src="./js/common.js"></script>
+    <script type="text/html" id="categories">
+        <% for(var i=0;i < data.length;i++){ %>
+            <tr data-id="<%=data[i].id%>">
+                <td class="text-center"><input type="checkbox"></td>
+                <td><%=data[i].name%></td>
+                <td><%=data[i].slug%></td>
+                <td><%=data[i].classname%></td>
+                <td class="text-center">
+                    <a href="javascript:;" class="btn btn-info btn-xs">编辑</a>
+                    <a href="javascript:;" class="btn btn-danger btn-xs">删除</a>
+                </td>
+            </tr>
+            <% } %>
+    </script>
+    <script>
+        $(function() {
+            // 获取文章分类方式请求
+            $.ajax({
+                url: "api/_getCategories.php",
+                dataType: "json",
+                success: function(res) {
+                    // console.log(res);
+                    var html = template("categories", res);
+                    $("tbody").html(html);
+                }
+
+            });
+            // 给添加按钮添加点击事件
+            $("#btnAdd").on("click", function() {
+                var name = $("#name").val();
+                var slug = $("#slug").val();
+                var classname = $("#classname").val();
+                $.ajax({
+                    url: "api/_addCategories.php",
+                    type: "post",
+                    data: {
+                        name,
+                        slug,
+                        classname
+                    },
+                    dataType: "json",
+                    beforeSend: function() {
+                        if (name.trim() === "") {
+                            $(".alert").show().find("span").text("分类名称不能为空,请输入分类名称");
+                            $("#name").focus();
+                            return false;
+                        }
+                        if (slug.trim() === "") {
+                            $(".alert").show().find("span").text("别名不能为空,请输入别名");
+                            $("#slug").focus();
+                            return false;
+                        }
+                        if (classname.trim() === "") {
+                            $(".alert").show().find("span").text("类名不能为空,请输入类名");
+                            $("#classname").focus();
+                            return false;
+                        }
+                    },
+                    success: function(res) {
+                        // console.log(res);
+                        if (res.code == 1) {
+                            // 重新加载
+                            location.reload();
+                        }
+                    }
+
+                })
+            });
+            // 给编辑按钮添加点击事件,因为编辑按钮是由模板引擎生成的,所以不能直接添加添加点击事件,必须使用事件委托
+            $("tbody").on("click", ".btn-info", function() {
+                // 隐藏添加按钮,显示编辑完成和取消编辑按钮
+                $("#btnAdd").hide();
+                $("#btnEdit").show();
+                $("#btnCancel").show();
+                // 点击编辑按钮,将点击的那一行数据显示在左侧表单中
+                var tr = $(this).parents("tr");
+                var name = tr.find("td").eq(1).text().trim();
+                var slug = tr.find("td").eq(2).text().trim();
+                var classname = tr.find("td").eq(3).text().trim();
+                // 将获取到的内容放入左侧表单
+                $("#name").val(name);
+                $("#slug").val(slug);
+                $("#classname").val(classname);
+                $("#cataId").val($(tr).attr("data-id"));
+            })
+            // 给取消编辑按钮添加点击事件
+            $("#btnCancel").on("click",function(){
+                $("#btnAdd").show();
+                $("#btnEdit").hide();
+                $("#btnCancel").hide();
+
+                $("form").get(0).reset();
+            })
+            // 给编辑完成按钮添加点击事件
+            $("#btnEdit").on("click",function(){
+                // 获取需要发送给后台的数据(id,name,slug,classname)
+                var id=$("#cataId").val();
+                var name=$("#name").val();
+                var slug=$("#slug").val();
+                var classname=$("#classname").val();
+                // 发送ajax请求
+                $.ajax({
+                    url:"api/_updateCategories.php",
+                    type:"post",
+                    data:{id,name,slug,classname},
+                    dataType:"json",
+                    beforeSend:function(){
+                        if (name.trim() === "") {
+                            $(".alert").show().find("span").text("分类名称不能为空,请输入分类名称");
+                            $("#name").focus();
+                            return false;
+                        }
+                        if (slug.trim() === "") {
+                            $(".alert").show().find("span").text("别名不能为空,请输入别名");
+                            $("#slug").focus();
+                            return false;
+                        }
+                        if (classname.trim() === "") {
+                            $(".alert").show().find("span").text("类名不能为空,请输入类名");
+                            $("#classname").focus();
+                            return false;
+                        }
+                    },
+                    success:function(res){
+                        console.log(res);
+                        
+                        if(res.code==1){
+                            // 数据修改成功,刷新页面
+                            location.reload();
+                        }else{
+                            console.log(res.msg);
+                        }
+                    }
+                })
+            })
+            // 给删除按钮添加事件
+            $("tbody").on("click",".btn-danger",function(){
+                // alert(123);
+                var temp=confirm("您确定要删除当前所选吗?");
+                if(temp){
+                    // 获取id
+                    var id=$(this).parents("tr").attr("data-id");
+                    // 发送ajax请求
+                    $.ajax({
+                        url:"api/_delCategories.php",
+                        type:"post",
+                        data:{id},
+                        dataType:"json",
+                        success:function(res){
+                           if(res.code==1){
+                                location.reload();
+                           }else{
+                               alert(res.msg);
+                           }
+                        }
+                    })
+
+                }
+            })
+            // 全选  取消全选
+            $("#checkAll").on("change",function(){
+                var status=$(this).prop("checked");
+                $("tbody input").prop("checked",status);
+                // 当全选按钮选中,出现批量删除按钮
+                if(status){
+                    $("#delAll").show();
+                }else{
+                    $("#delAll").hide();  
+                }
+            })
+            // 通过事件委托给表格里面所有的复选框添加事件
+            $("tbody").on("change","input",function(){
+                // 检查表格中选中的复选框 和 表格中复选框的总数 一致,全选按钮选中
+                var total=$("tbody input").length;
+                var checked=$("tbody input:checked").length;
+
+                if(total==checked){
+                    $("#checkAll").prop("checked",true);
+                }else{
+                    $("#checkAll").prop("checked",false);
+                }
+                // 当用户选择分类大于等于两种的时候,出现批量删除按钮
+                if(checked >= 2){
+                    $("#delAll").show();
+                }else{
+                    $("#delAll").hide();  
+                }
+            })
+            // 批量删除按钮添加点击事件
+            $("#delAll").on("click",function(){
+                var temp=confirm("您确定删除选中的这些?");
+                if(temp){
+                //  将用户选中的id分类制作为一个数组
+                var arr=[];
+                $("tbody input:checked").each(function(index,element){
+                   var id=$(element).parents("tr").attr("data-id");
+                   arr.push(id);
+                })
+            
+                $.ajax({
+                    url:"api/_delManyCategories.php",
+                    type:"post",
+                    data:{ids:arr},
+                    dataType:"json",
+                    success:function(res){
+                        if(res.code==1){
+                            location.reload();
+                        }else{
+                            console.log(res.msg); 
+                        }
+                    }
+                })
+            }
+            })
+        })
+    </script>
+</head>
+
+<body>
+    <script>
+        NProgress.start()
+    </script>
+
+    <div class="main">
+        <nav class="navbar">
+            <button class="btn btn-default navbar-btn fa fa-bars"></button>
+            <ul class="nav navbar-nav navbar-right">
+                <li><a href="profile.html"><i class="fa fa-user"></i>个人中心</a></li>
+                <li><a href="login.html"><i class="fa fa-sign-out"></i>退出</a></li>
+            </ul>
+        </nav>
+        <div class="container-fluid">
+            <div class="page-title">
+                <h1>分类目录</h1>
+            </div>
+            <!-- 有错误信息时展示 -->
+            <div class="alert alert-danger" style="display: none">
+                <strong>错误！</strong><span>发生XXX错误</span>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <form>
+                        <!-- 添加一个隐藏域 -->
+                        <input type="hidden" id="cataId" name="id">
+                        <h2>添加新分类目录</h2>
+                        <div class="form-group">
+                            <label for="name">名称</label>
+                            <input id="name" class="form-control" name="name" type="text" placeholder="分类名称">
+                        </div>
+                        <div class="form-group">
+                            <label for="slug">别名</label>
+                            <input id="slug" class="form-control" name="slug" type="text" placeholder="slug">
+                            <p class="help-block">https://zce.me/category/<strong>slug</strong></p>
+                        </div>
+                        <div class="form-group">
+                            <label for="classname">类名</label>
+                            <input id="classname" class="form-control" name="classname" type="text" placeholder="请输入类名">
+                        </div>
+                        <div class="form-group">
+                            <span class="btn btn-primary" id="btnAdd">添加</span>
+                            <span class="btn btn-primary" id="btnEdit" style="display: none">编辑完成</span>
+                            <span class="btn btn-primary" id="btnCancel" style="display: none">取消编辑</span>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-8">
+                    <div class="page-action">
+                        <!-- show when multiple checked -->
+                        <a class="btn btn-danger btn-sm" href="javascript:;" style="display: none" id="delAll">批量删除</a>
+                    </div>
+                    <table class="table table-striped table-bordered table-hover">
+                        <thead>
+                            <tr>
+                                <th class="text-center" width="40"><input type="checkbox" id="checkAll"></th>
+                                <th>名称</th>
+                                <th>Slug</th>
+                                <th>类名</th>
+                                <th class="text-center" width="100">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="text-center"><input type="checkbox"></td>
+                                <td>未分类</td>
+                                <td>uncategorized</td>
+                                <td></td>
+                                <td class="text-center">
+                                    <a href="javascript:;" class="btn btn-info btn-xs">编辑</a>
+                                    <a href="javascript:;" class="btn btn-danger btn-xs">删除</a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-center"><input type="checkbox"></td>
+                                <td>未分类</td>
+                                <td>uncategorized</td>
+                                <td></td>
+                                <td class="text-center">
+                                    <a href="javascript:;" class="btn btn-info btn-xs">编辑</a>
+                                    <a href="javascript:;" class="btn btn-danger btn-xs">删除</a>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-center"><input type="checkbox"></td>
+                                <td>未分类</td>
+                                <td>uncategorized</td>
+                                <td></td>
+                                <td class="text-center">
+                                    <a href="javascript:;" class="btn btn-info btn-xs">编辑</a>
+                                    <a href="javascript:;" class="btn btn-danger btn-xs">删除</a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="aside">
+        <div class="profile">
+            <img class="avatar" src="../static/uploads/avatar.jpg">
+            <h3 class="name">布头儿</h3>
+        </div>
+        <ul class="nav">
+            <li>
+                <a href="index.html"><i class="fa fa-dashboard"></i>仪表盘</a>
+            </li>
+            <li class="active">
+                <a href="#menu-posts" data-toggle="collapse">
+                    <i class="fa fa-thumb-tack"></i>文章<i class="fa fa-angle-right"></i>
+                </a>
+                <ul id="menu-posts" class="collapse in">
+                    <li><a href="posts.html">所有文章</a></li>
+                    <li><a href="post-add.html">写文章</a></li>
+                    <li class="active"><a href="categories.html">分类目录</a></li>
+                </ul>
+            </li>
+            <li>
+                <a href="comments.html"><i class="fa fa-comments"></i>评论</a>
+            </li>
+            <li>
+                <a href="users.html"><i class="fa fa-users"></i>用户</a>
+            </li>
+            <li>
+                <a href="#menu-settings" class="collapsed" data-toggle="collapse">
+                    <i class="fa fa-cogs"></i>设置<i class="fa fa-angle-right"></i>
+                </a>
+                <ul id="menu-settings" class="collapse">
+                    <li><a href="nav-menus.html">导航菜单</a></li>
+                    <li><a href="slides.html">图片轮播</a></li>
+                    <li><a href="settings.html">网站设置</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+
+    <script src="../static/assets/vendors/jquery/jquery.js"></script>
+    <script src="../static/assets/vendors/bootstrap/js/bootstrap.js"></script>
+    <script>
+        NProgress.done()
+    </script>
+</body>
+
+</html>
